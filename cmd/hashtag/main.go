@@ -5,6 +5,7 @@ import (
 	ahocorasick "github.com/BobuSumisu/aho-corasick"
 	"sort"
 	"strings"
+	"time"
 )
 
 type StringMatches struct {
@@ -63,13 +64,13 @@ func (sm *StringMatches) ComputeHashTags(pos int) []*HashTag {
 		}
 	}
 
-	if sm.cache[pos] == nil {
-		sm.cache[pos] = make([]*HashTag, 0)
-	}
-
 	if sm.done[pos] {
 		//fmt.Println("Already done")
 		return sm.cache[pos]
+	}
+
+	if sm.cache[pos] == nil {
+		sm.cache[pos] = make([]*HashTag, 0)
 	}
 
 	// we first start by looking at potential words at this position
@@ -135,16 +136,21 @@ func (sm *StringMatches) SuggestHashtags() []*HashTag {
 func main() {
 	builder := ahocorasick.NewTrieBuilder()
 	fmt.Printf("Loading dictionary...\n")
-	err := builder.LoadStrings("test_data/words")
-	if err != nil {
-		panic(err)
+	wordLists := []string{
+		//"test_data/words",
+		//"test_data/words.txt",
+		"test_data/google-10000-english-no-swears.txt",
 	}
-	fmt.Printf("Loading words.txt...\n")
-	// from https://github.com/dwyl/english-words/blob/master/words.txt
-	err = builder.LoadStrings("test_data/words.txt")
-	if err != nil {
-		panic(err)
+	var err error
+	for _, wordList := range wordLists {
+		fmt.Printf("Loading %s...\n", wordList)
+		err = builder.LoadStrings(wordList)
+
+		if err != nil {
+			panic(err)
+		}
 	}
+
 	fmt.Printf("Building trie...\n")
 	trie := builder.Build()
 	fmt.Printf("Built.\n")
@@ -162,12 +168,34 @@ func main() {
 
 		// we keep a list of all matches starting at a certain position
 
-		trieMatches := trie.MatchString(s)
+		start := time.Now()
+		var hashTags []*HashTag
+		var trieMatches []*ahocorasick.Match
+		iterCount := 100
+		for i := 0; i < iterCount; i++ {
+			trieMatches = trie.MatchString(s)
+		}
+		elapsed := time.Since(start)
+		fmt.Printf("Aho corasick took %d ns for %d matches\n",
+			elapsed.Nanoseconds()/int64(iterCount),
+			len(trieMatches),
+		)
+
 		for _, m := range trieMatches {
 			fmt.Printf(" pos: %d - %s\n", m.Pos(), m.String())
 		}
-		matches := NewStringMatches(s, trieMatches)
-		hashTags := matches.SuggestHashtags()
+
+		start = time.Now()
+		iterCount = 1
+		for i := 0; i < iterCount; i++ {
+			matches := NewStringMatches(s, trieMatches)
+			hashTags = matches.SuggestHashtags()
+		}
+		elapsed = time.Since(start)
+		fmt.Printf("Hashtag took %d ns for %d hashtags\n",
+			elapsed.Nanoseconds()/int64(iterCount),
+			len(hashTags),
+		)
 
 		// show at most 5 results
 		for _, hashTag := range hashTags[:5] {
