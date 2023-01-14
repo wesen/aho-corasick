@@ -1,4 +1,4 @@
-package ahocorasick
+package pkg
 
 const (
 	rootState int64 = 1

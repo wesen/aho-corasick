@@ -1,8 +1,9 @@
-package ahocorasick
+package pkg
 
 import (
 	"bytes"
 	"fmt"
+	"github.com/BobuSumisu/aho-corasick"
 	"os"
 	"testing"
 )
@@ -10,9 +11,9 @@ import (
 func testTrie(trie *Trie) error {
 	matches := trie.MatchString("Lorem ipsum dolor sit amet, consectetur adipiscing elit.")
 	expected := []*Match{
-		newMatchString(1, 0, "or"),
-		newMatchString(15, 0, "or"),
-		newMatchString(22, 1, "amet"),
+		ahocorasick.newMatchString(1, 0, "or"),
+		ahocorasick.newMatchString(15, 0, "or"),
+		ahocorasick.newMatchString(22, 1, "amet"),
 	}
 
 	if len(expected) != len(matches) {

@@ -1,4 +1,4 @@
-package ahocorasick
+package pkg
 
 import (
 	"fmt"
