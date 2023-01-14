@@ -3,6 +3,7 @@ package cmds
 import (
 	"fmt"
 	"github.com/BobuSumisu/aho-corasick/pkg"
+	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -75,7 +76,11 @@ func (s *Server) computeHashtags(input string, count int) CompleteResponse {
 	start = time.Now()
 	matches := pkg.NewStringMatches(input, trieMatches)
 	hashTags := matches.SuggestHashtags()
-	results.Hashtags = hashTags[:count]
+	if len(hashTags) > count {
+		results.Hashtags = hashTags[:count]
+	} else {
+		results.Hashtags = hashTags
+	}
 	elapsed = time.Since(start)
 	results.SuggestDuration_ns = elapsed.Nanoseconds()
 
@@ -126,6 +131,8 @@ func (s *Server) Run() error {
 
 		c.JSON(http.StatusOK, responses)
 	})
+
+	router.Use(static.Serve("/", static.LocalFile("./web", true)))
 
 	addr := ":" + s.port
 	log.Info().Str("port", s.port).Msg("Starting server")
