@@ -12,6 +12,9 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(cmds.ReplCmd)
+	rootCmd.AddCommand(cmds.CompleteCmd)
+	rootCmd.AddCommand(cmds.ServeCmd)
+
 	wordLists := []string{
 		"test_data/words",
 		"test_data/words.txt",
@@ -22,5 +25,4 @@ func init() {
 
 func main() {
 	_ = rootCmd.Execute()
-
 }

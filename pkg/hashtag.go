@@ -6,17 +6,13 @@ import (
 )
 
 type StringMatches struct {
-	String             string
-	AllMatches         [][]*Match
-	unprocessedMatches [][]*Match
-	done               []bool
-	cache              [][]*HashTag
+	String     string
+	AllMatches [][]*Match
+	cache      [][]*HashTag
 }
 
 func NewStringMatches(s string, matches []*Match) *StringMatches {
 	matches_ := make([][]*Match, len(s))
-	unProcessedMatches_ := make([][]*Match, len(s))
-	done_ := make([]bool, len(s))
 
 	for _, match := range matches {
 		pos := match.Pos()
@@ -34,15 +30,9 @@ func NewStringMatches(s string, matches []*Match) *StringMatches {
 		})
 	}
 
-	for i, m := range matches_ {
-		unProcessedMatches_[i] = m
-	}
-
 	return &StringMatches{
 		s,
 		matches_,
-		unProcessedMatches_,
-		done_,
 		make([][]*HashTag, len(s)),
 	}
 }
