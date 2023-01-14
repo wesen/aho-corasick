@@ -21,7 +21,7 @@ func newMatchString(pos, pattern int64, match string) *Match {
 }
 
 func (m *Match) String() string {
-	return fmt.Sprintf("{%d %d %q}", m.pos, m.pattern, m.match)
+	return fmt.Sprintf("{pos:%d %d %q}", m.pos, m.pattern, m.match)
 }
 
 // Pos returns the byte position of the match.
