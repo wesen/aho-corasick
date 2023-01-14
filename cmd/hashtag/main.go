@@ -11,9 +11,9 @@ func main() {
 	builder := ahocorasick.NewTrieBuilder()
 	fmt.Printf("Loading dictionary...\n")
 	wordLists := []string{
-		//"test_data/words",
+		"test_data/words",
 		"test_data/words.txt",
-		//"test_data/google-10000-english-no-swears.txt",
+		"test_data/google-10000-english-no-swears.txt",
 	}
 	var err error
 	for _, wordList := range wordLists {
@@ -65,9 +65,11 @@ func main() {
 			fmt.Printf(" pos: %d - %s\n", m.Pos(), m.String())
 			matchedStrings[string(m.Match())] = nil
 		}
-		for k := range matchedStrings {
-			fmt.Printf("\"%s\",\n", k)
-		}
+
+		//// code to print out for unit tests
+		//for k := range matchedStrings {
+		//	fmt.Printf("\"%s\",\n", k)
+		//}
 
 		start = time.Now()
 		iterCount = 1

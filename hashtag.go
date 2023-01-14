@@ -56,64 +56,59 @@ func (ht *HashTag) Score() int {
 	return ht.Words
 }
 
+// ComputeHashTags computes the best hashtags starting at a given position
 func (sm *StringMatches) ComputeHashTags(pos int) []*HashTag {
-	//fmt.Printf("Computing hashtags for %d: %s\n", pos, sm.String[pos:])
+	ret := make([]*HashTag, 0)
 
 	if pos >= len(sm.String) {
 		return []*HashTag{
-			{
-				String: "",
-				Words:  0,
+			&HashTag{
+				"",
+				0,
 			},
 		}
 	}
 
-	if sm.done[pos] {
-		//fmt.Println("Already done")
+	if sm.cache[pos] != nil {
 		return sm.cache[pos]
 	}
 
-	if sm.cache[pos] == nil {
-		sm.cache[pos] = make([]*HashTag, 0)
-	}
+	// we go through all the matches at the current position and try to build a hashtag
+	// and then recurse into the suffix
+	for _, match := range sm.AllMatches[pos] {
+		s := match.MatchString()
 
-	// we first start by looking at potential words at this position
-	if sm.unprocessedMatches[pos] == nil || len(sm.unprocessedMatches[pos]) == 0 {
-		// if we have no more matches to process, we can just gobble the character up
-		// in case there is an unknown hashtag here, we just won't capitalize
-		for _, ht := range sm.ComputeHashTags(pos + 1) {
-			ht_ := &HashTag{
-				sm.String[:pos] + capitalize(ht.String),
-				// we increment the word despite not having a word here
-				// because that will downweight the result
-				ht.Words + 1,
-			}
-			//fmt.Printf("Adding %s to %s\n", ht_.String, sm.String[pos:pos+1])
-			sm.cache[pos] = append(sm.cache[pos], ht_)
-		}
-		sm.done[pos] = true
-		return sm.cache[pos]
-	}
+		for _, suffix := range sm.ComputeHashTags(pos + len(s)) {
+			// we try to capitalize the first letter of the suffix
+			// and then add it to the current match
 
-	// go over matches at the given position
-	for _, match := range sm.unprocessedMatches[pos] {
-		// we can now recurse
-		s := match.Match()
-		pos_ := match.Pos()
-		matchLen := len(s)
-		nextWordPos := int(pos_) + matchLen
-		for _, ht := range sm.ComputeHashTags(nextWordPos) {
-			ht_ := &HashTag{
-				sm.String[pos:nextWordPos] + capitalize(ht.String),
-				ht.Words + 1,
-			}
-			//fmt.Printf("Adding %s to %s\n", ht_.String, sm.String[pos:nextWordPos])
-			sm.cache[pos] = append(sm.cache[pos], ht_)
+			// we should try to do something about single letter words here
+			// we try not to capitalize single letter words
+			var s_ string
+			//if len(s) > 1 {
+			//	if len(suffix.String) > 1 {
+			//		s_ = capitalize(s) + capitalize(suffix.String)
+			//	} else {
+			//		s_ = capitalize(s) + suffix.String
+			//	}
+			//} else {
+			s_ = capitalize(s) + suffix.String
+			//}
+
+			ret = append(ret, &HashTag{
+				String: s_,
+				Words:  1 + suffix.Words,
+			})
 		}
 	}
 
-	sm.done[pos] = true
-	return sm.cache[pos]
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i].Words < ret[j].Words
+	})
+
+	sm.cache[pos] = ret
+
+	return ret
 }
 
 func capitalize(s string) string {
