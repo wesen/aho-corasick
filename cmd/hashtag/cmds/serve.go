@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"io/fs"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -92,27 +92,34 @@ func (s *Server) computeHashtags(input string, count int) CompleteResponse {
 //go:embed web/*
 var webFS embed.FS
 
-// Static returns a middleware handler that serves static files in the given directory.
-func ServeEmbedFS(urlPrefix string, fsPrefix string, fs embed.FS) gin.HandlerFunc {
-	fileserver := http.FileServer(http.FS(fs))
-	if urlPrefix != "" {
-		fileserver = http.StripPrefix(urlPrefix, fileserver)
+type embedFileSystem struct {
+	http.FileSystem
+	indexes bool
+}
+
+func (e embedFileSystem) Exists(prefix string, path string) bool {
+	f, err := e.Open(path)
+	if err != nil {
+		return false
 	}
 
-	return func(c *gin.Context) {
-		path := strings.TrimPrefix(urlPrefix, c.Request.URL.Path)
-		if path == "" {
-			path = "index.html"
-		}
-		path = fmt.Sprintf("%s/%s", fsPrefix, path)
-		f, err := fs.Open(path)
-		if err != nil {
-			return
-		}
-		defer f.Close()
+	// check if indexing is allowed
+	s, _ := f.Stat()
+	if s.IsDir() && !e.indexes {
+		return false
+	}
 
-		fileserver.ServeHTTP(c.Writer, c.Request)
-		c.Abort()
+	return true
+}
+
+func EmbedFolder(fsEmbed embed.FS, targetPath string, index bool) static.ServeFileSystem {
+	subFS, err := fs.Sub(fsEmbed, targetPath)
+	if err != nil {
+		panic(err)
+	}
+	return embedFileSystem{
+		FileSystem: http.FS(subFS),
+		indexes:    index,
 	}
 }
 
@@ -161,8 +168,8 @@ func (s *Server) Run() error {
 		c.JSON(http.StatusOK, responses)
 	})
 
-	router.Use(static.Serve("/", static.LocalFile("./cmd/hashtag/cmds/web", true)))
-	router.Use(ServeEmbedFS("/", "web", webFS))
+	fs := EmbedFolder(webFS, "web", true)
+	router.Use(static.Serve("/", fs))
 
 	addr := ":" + s.port
 	log.Info().Str("port", s.port).Msg("Starting server")
