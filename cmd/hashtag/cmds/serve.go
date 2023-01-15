@@ -198,6 +198,16 @@ var ServeCmd = &cobra.Command{
 	},
 }
 
+var GrpcCmd = &cobra.Command{
+	Use:   "grpc",
+	Short: "Starts the hashtag server",
+	Run: func(cmd *cobra.Command, args []string) {
+
+		//s := grpc.NewServer()
+		//grpc2.RegisterCompleteServer(s, &server{})
+	},
+}
+
 func init() {
 	ServeCmd.Flags().StringP("port", "p", "8080", "Port to listen on")
 }
