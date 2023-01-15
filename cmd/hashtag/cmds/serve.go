@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"embed"
 	"fmt"
 	"github.com/BobuSumisu/aho-corasick/pkg"
 	"github.com/gin-gonic/contrib/static"
@@ -8,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -87,6 +89,33 @@ func (s *Server) computeHashtags(input string, count int) CompleteResponse {
 	return results
 }
 
+//go:embed web/*
+var webFS embed.FS
+
+// Static returns a middleware handler that serves static files in the given directory.
+func ServeEmbedFS(urlPrefix string, fsPrefix string, fs embed.FS) gin.HandlerFunc {
+	fileserver := http.FileServer(http.FS(fs))
+	if urlPrefix != "" {
+		fileserver = http.StripPrefix(urlPrefix, fileserver)
+	}
+
+	return func(c *gin.Context) {
+		path := strings.TrimPrefix(urlPrefix, c.Request.URL.Path)
+		if path == "" {
+			path = "index.html"
+		}
+		path = fmt.Sprintf("%s/%s", fsPrefix, path)
+		f, err := fs.Open(path)
+		if err != nil {
+			return
+		}
+		defer f.Close()
+
+		fileserver.ServeHTTP(c.Writer, c.Request)
+		c.Abort()
+	}
+}
+
 func (s *Server) Run() error {
 	router := gin.Default()
 
@@ -132,7 +161,8 @@ func (s *Server) Run() error {
 		c.JSON(http.StatusOK, responses)
 	})
 
-	router.Use(static.Serve("/", static.LocalFile("./web", true)))
+	router.Use(static.Serve("/", static.LocalFile("./cmd/hashtag/cmds/web", true)))
+	router.Use(ServeEmbedFS("/", "web", webFS))
 
 	addr := ":" + s.port
 	log.Info().Str("port", s.port).Msg("Starting server")
